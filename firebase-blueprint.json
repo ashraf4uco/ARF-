@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "books": {
+      "title": "Ebook",
+      "description": "Represents a digital book available in the store.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "subtitle": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "longDescription": { "type": "string", "maxLength": 5000 },
+        "price": { "type": "number" },
+        "coverImage": { "type": "string", "format": "uri" },
+        "fileUrl": { "type": "string", "format": "uri" },
+        "category": { "type": "string", "maxLength": 50 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "price", "isPublished"]
+    },
+    "orders": {
+      "title": "Order",
+      "description": "Represents a purchase transaction.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "bookId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "buyerName": { "type": "string", "maxLength": 100 },
+        "buyerEmail": { "type": "string", "format": "email" },
+        "buyerWhatsApp": { "type": "string", "maxLength": 20 },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "failed"] },
+        "razorpayOrderId": { "type": "string", "maxLength": 100 },
+        "razorpayPaymentId": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "token": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["bookId", "buyerEmail", "amount", "status", "createdAt"]
+    },
+    "admins": {
+      "title": "Admin",
+      "description": "Store administrators.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/books/{bookId}": {
+      "schema": "books",
+      "description": "Collection of available ebooks."
+    },
+    "/orders/{orderId}": {
+      "schema": "orders",
+      "description": "Customer purchase records."
+    },
+    "/admins/{adminId}": {
+      "schema": "admins",
+      "description": "List of authorized administrators."
+    }
+  }
+}

@@ -4,7 +4,9 @@ import {
   calculateCartTotals,
   filterBooks,
   validateEmail,
-  generateOrderConfirmation
+  generateOrderConfirmation,
+  toggleWishlistBook,
+  isBookInWishlist
 } from './ebookStore';
 import { INITIAL_BOOKS } from '../data/books';
 
@@ -66,3 +68,21 @@ test('generateOrderConfirmation produces complete order model with downloads', (
   assert.equal(confirmation.downloadLinks.length, 1);
   assert.equal(confirmation.downloadLinks[0].bookId, 'the-minimalist-creator');
 });
+
+test('toggleWishlistBook adds and removes items persistently', () => {
+  let list: string[] = [];
+  list = toggleWishlistBook(list, 'the-art-of-focus');
+  assert.equal(list.length, 1);
+  assert.equal(isBookInWishlist(list, 'the-art-of-focus'), true);
+  assert.equal(isBookInWishlist(list, 'digital-craftsmanship'), false);
+
+  list = toggleWishlistBook(list, 'digital-craftsmanship');
+  assert.equal(list.length, 2);
+
+  // Toggle again to remove
+  list = toggleWishlistBook(list, 'the-art-of-focus');
+  assert.equal(list.length, 1);
+  assert.equal(isBookInWishlist(list, 'the-art-of-focus'), false);
+  assert.equal(isBookInWishlist(list, 'digital-craftsmanship'), true);
+});
+

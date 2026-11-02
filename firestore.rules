@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ---------------------------------------------------------
+    // PRIMITIVES & HELPERS
+    // ---------------------------------------------------------
+    
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---------------------------------------------------------
+    // VALIDATION HELPERS
+    // ---------------------------------------------------------
+
+    function isValidBook(data) {
+      return data.title is string && data.title.size() <= 200
+        && data.price is number && data.price >= 0
+        && data.isPublished is bool
+        && (!('category' in data) || (data.category is string && data.category.size() <= 50))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000));
+    }
+
+    function isValidOrder(data) {
+      return isValidId(data.bookId)
+        && data.amount is number && data.amount >= 0
+        && data.status in ['pending', 'paid', 'failed']
+        && data.buyerEmail is string && data.buyerEmail.size() <= 200
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
+        && (!('token' in data) || (data.token is string && data.token.size() <= 100));
+    }
+
+    // ---------------------------------------------------------
+    // DEFAULT DENY
+    // ---------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // ADMINS COLLECTION
+    // ---------------------------------------------------------
+    match /admins/{adminId} {
+      allow read: if isSignedIn(); // Logged in users can check admin status
+      allow write: if false; // Admins must be provisioned manually/server-side
+    }
+
+    // ---------------------------------------------------------
+    // BOOKS COLLECTION
+    // ---------------------------------------------------------
+    match /books/{bookId} {
+      allow read: if true; // Everyone can see books
+      allow create: if isAdmin() && isValidBook(incoming());
+      allow update: if isAdmin() && isValidBook(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'subtitle', 'description', 'longDescription', 'price', 'coverImage', 'fileUrl', 'category', 'isPublished'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------
+    // ORDERS COLLECTION
+    // ---------------------------------------------------------
+    match /orders/{orderId} {
+      // Users can see their own orders or guest orders with a valid token
+      allow get: if isAdmin() 
+        || (isSignedIn() && existing().userId == request.auth.uid)
+        || (request.query.token != null && existing().token == request.query.token);
+      
+      // List is restricted to owners/admins
+      allow list: if isAdmin() 
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Create: Users or Guests can create a pending order
+      allow create: if isValidOrder(incoming()) 
+        && incoming().status == 'pending'
+        && (!('userId' in incoming()) || incoming().userId == request.auth.uid)
+        && exists(/databases/$(database)/documents/books/$(incoming().bookId));
+
+      // Update: Only status/paymentId can be updated by the system/admin
+      // Note: In this architecture, status updates should ideally happen via backend webhooks
+      // but we allow admins to manage them.
+      allow update: if (isAdmin() || false) // Placeholder for system-service-role
+        && isValidOrder(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'razorpayPaymentId', 'razorpayOrderId']);
+    }
+  }
+}

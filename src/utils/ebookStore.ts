@@ -103,3 +103,45 @@ export function generateOrderConfirmation(
     }))
   };
 }
+
+export const WISHLIST_STORAGE_KEY = 'arf_ebook_wishlist';
+
+export function toggleWishlistBook(currentWishlist: string[], bookId: string): string[] {
+  if (!bookId) return currentWishlist;
+  const exists = currentWishlist.includes(bookId);
+  if (exists) {
+    return currentWishlist.filter((id) => id !== bookId);
+  }
+  return [...currentWishlist, bookId];
+}
+
+export function isBookInWishlist(wishlist: string[], bookId: string): boolean {
+  if (!bookId || !Array.isArray(wishlist)) return false;
+  return wishlist.includes(bookId);
+}
+
+export function loadWishlistFromStorage(): string[] {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveWishlistToStorage(wishlist: string[]): void {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(wishlist));
+  } catch {
+    // Graceful error recovery for private/full storage
+  }
+}
+
