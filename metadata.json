@@ -1,0 +1,6 @@
+{
+  "name": "ARF — Modern Independent Ebook Store",
+  "description": "Discover thoughtfully crafted ebooks designed to inspire, educate, and help you grow by author ASHRAF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
